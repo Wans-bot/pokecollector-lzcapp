@@ -1,0 +1,54 @@
+package: cloud.lazycat.app.pokecollector
+version: 1.51.0-3
+name: PokéCollector 宝可梦卡牌收藏
+description: 自托管的宝可梦卡牌收藏管理器：记录持有卡牌与卡册、追踪价格与收藏进度，支持多用户与统计图表。
+author: Gilles Romer (Git-Romer)
+license: AGPL-3.0
+homepage: https://github.com/Git-Romer/pokecollector
+min_os_version: 1.6.0
+permissions:
+  required:
+    - net.internet
+locales:
+  zh-CN:
+    name: PokéCollector 宝可梦卡牌收藏
+    description: 自托管的宝可梦卡牌收藏管理器：记录持有卡牌与卡册、追踪价格与收藏进度，支持多用户与统计图表。
+    usage: |
+      PokéCollector 是自托管的宝可梦集换式卡牌（PTCG）收藏管理器：把持有的单卡、卡册、未拆产品与心愿单集中管理，跟踪价格与收藏完成度，支持多用户、统计图表与导入导出。
+
+      首次使用：
+      1. 默认「单用户模式」：打开应用直接可用、无需登录（所有收藏保存在本机这一份）。默认界面语言为简体中文（可在「设置」中切换）。
+      2. 首次启动会在后台从 TCGdex 同步卡牌数据（含简体中文卡名），同步完成前卡牌搜索与列表可能数据较少，稍等片刻即可。
+      3. 需要多人各自管理收藏时，在「设置 → 用户」中开启多用户模式；开启后打开应用会自动完成登录（免密注入）。审核专用账号：admin / PkLzc-6Ht9Vr2x（登录后可在「设置 → 用户」中修改，修改后自动登录会停用，改为手动登录）。
+
+      日常使用：
+      - 搜索卡牌并加入收藏；用「卡册」整理收藏；「统计」查看数量、市值与完成度；「心愿单」记录想收的卡。
+      - 导入/导出与卡图上传：会弹出统一文件选择器，可从微服网盘选择文件或保存到网盘。
+      - 可选功能：AI 识卡扫描与 Telegram 价格提醒需要在「设置」中自行配置接口与密钥，默认关闭，不影响其余功能。
+
+      说明：
+      - 应用数据（收藏、卡册、用户、卡图缓存）保存在微服本机，重启、升级不丢失；卸载应用默认不删除数据。
+      - 卡牌资料与价格来自公开的 TCGdex 与汇率数据源，需要联网；价格数据仅供参考。
+      - 如所在网络无法直连 TCGdex（影响卡牌数据同步），可在安装时的「HTTP 代理（可选）」中填写 HTTP 代理地址（例如 http://192.168.1.2:7890），留空为直连。
+      - 移动端浏览器可正常使用（响应式界面）。
+  en-US:
+    name: PokéCollector
+    description: "Self-hosted Pokémon TCG collection manager: track your cards and binders, follow prices and completion, with multi-user support and analytics."
+    usage: |
+      PokéCollector is a self-hosted Pokémon TCG collection manager: keep your cards, binders, sealed products and wishlist in one place, follow prices and completion, with multi-user support and analytics.
+
+      First run:
+      1. The app runs in single-user mode by default: open it and start using it, no login required. The default UI language is Simplified Chinese, switchable in Settings.
+      2. On first launch card data (including Simplified Chinese card names) is synced from TCGdex in the background; searches may show fewer results until the sync finishes.
+      3. To let several people keep separate collections, enable multi-user mode in Settings → Users; after that the app signs you in automatically (passwordless inject) on open. Review account: admin / PkLzc-6Ht9Vr2x (change it in Settings → Users; changing it disables automatic sign-in).
+
+      Daily use:
+      - Search cards and add them to your collection; organize with binders; check collection size, value and completion in Analytics; keep a wishlist.
+      - Imports, exports and card-photo uploads open the unified file picker, so you can pick files from the box cloud drive or save results back to it.
+      - Optional: AI card scanning and Telegram price alerts require your own API configuration in Settings; both are off by default.
+
+      Notes:
+      - All data (collection, binders, users, card image cache) is stored on your box and survives restarts and upgrades; uninstalling keeps app data by default.
+      - Card data and prices come from public TCGdex and exchange-rate sources and require internet access; prices are informational only.
+      - If your network cannot reach TCGdex directly (card data sync), you can set an HTTP proxy in the optional "HTTP proxy" install parameter (e.g. http://192.168.1.2:7890); leave it empty to connect directly.
+      - The responsive UI also works in mobile browsers.

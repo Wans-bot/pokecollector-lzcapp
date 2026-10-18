@@ -1,0 +1,13 @@
+# 可选 HTTP 代理：部分网络（如国内直连受限时）无法访问 api.tcgdex.net，
+# 卡牌数据同步会失败。填写 HTTP/HTTPS 代理地址后，应用的所有外呼请求
+# 将经由该代理。留空则直连。
+#
+# 所有参数均为可选时安装界面会直接跳过；安装后也可在客户端的
+# 「应用 → 配置/重新配置」中修改本参数。
+params:
+  - id: http_proxy
+    type: string
+    name: "HTTP 代理（可选）"
+    description: "如所在网络无法直连 TCGdex（同步卡牌数据用），可填写 HTTP/HTTPS 代理地址，例如 http://192.168.1.2:7890。留空为直连。"
+    default_value: ""
+    optional: true

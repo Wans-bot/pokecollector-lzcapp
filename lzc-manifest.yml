@@ -1,0 +1,195 @@
+# PokéCollector 宝可梦卡牌收藏 · 懒猫 LPK V2 运行清单
+#
+# 设计要点：
+# 1. 三服务：frontend（nginx，内含 SPA 与 /api 反向代理）、backend（FastAPI）、
+#    postgres（数据库）。服务名与上游 compose 一致（frontend/backend/postgres），
+#    镜像内 nginx 以短服务名 http://backend:8000 回源、后端以 postgres:5432 连库。
+# 2. 免密：browser 注入（pkc-autologin.js）在未登录时自动调用 /api/auth/login
+#    完成登录并写入 localStorage，登出后再打开无需手输密码；右下角提供「切换账号」
+#    控件（真登出并停用自动登录），登录页提供「使用默认账号登录」一键恢复。
+#    同时把首次启动的界面语言默认设为简体中文（仅当前为默认值 en 时写入一次）。
+# 3. 缓存修正：上游 index.html 带 ETag/Last-Modified，客户端一旦缓存过旧页面
+#    （未注入版本）会走 304 复用旧副本导致注入失效；request 阶段去掉条件请求头、
+#    response 阶段对 HTML 输出 no-store，保证注入每次送达。
+# 4. 网盘文件拦截：上传（卡图/导入）与下载（导出/保存）走官方选择器 + 文件桥。
+application:
+  subdomain: pokecollector
+  routes:
+    - /=http://frontend.cloud.lazycat.app.pokecollector.lzcapp:80
+  health_check:
+    # 前端为静态 SPA，启动快；后端首启要建库/迁移（约 1-2 分钟），
+    # 就绪门等待各服务健康，未就绪期间客户端显示「启动中」。
+    test_url: http://frontend.cloud.lazycat.app.pokecollector.lzcapp:80/
+    start_period: 300s
+    timeout: 10s
+  injects:
+    # ── 免密登录 / 默认中文（browser 阶段）────────────────────────────────
+    - id: pkc-login-autofill
+      auth_required: false
+      when:
+        - /*
+      do:
+        - src: file:///lzcapp/pkg/content/lazycat-injects/pkc-autologin.js
+          params:
+            user: admin
+            password: PkLzc-6Ht9Vr2x
+    # ── HTML 缓存修正：request 阶段去掉条件请求头，强制上游回新页面 ─────────
+    - id: pkc-strip-conditional-headers
+      on: request
+      auth_required: false
+      when:
+        - /*
+      do: |
+        var accept = String(ctx.headers.get("Accept") || "");
+        if (accept.indexOf("text/html") < 0) return;
+        ctx.headers.del("If-None-Match");
+        ctx.headers.del("If-Modified-Since");
+    # ── HTML 缓存修正 + CSP 修正：response 阶段对 HTML 输出 no-store、去掉 ETag，
+    #    并给上游 CSP 增加 frame-src（否则懒猫网盘选择器的 file.<域名> iframe
+    #    会被 default-src 'self' 拦截，表现为选择器面板空白）────────────────────
+    - id: pkc-html-no-store
+      on: response
+      auth_required: false
+      when:
+        - /*
+      do: |
+        if (ctx.status !== 200) return;
+        var ct = String(ctx.headers.get("Content-Type") || "");
+        if (ct.indexOf("text/html") < 0) return;
+        ctx.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+        ctx.headers.del("ETag");
+        ctx.headers.del("Last-Modified");
+        try {
+          var csp = String(ctx.headers.get("Content-Security-Policy") || "");
+          var host = String((ctx.request && ctx.request.host) || "").split(":")[0].toLowerCase();
+          var dot = host.indexOf(".");
+          var boxDomain = dot > 0 ? host.slice(dot + 1) : "";
+          if (csp && boxDomain && csp.indexOf("frame-src") < 0) {
+            ctx.headers.set("Content-Security-Policy", csp + "; frame-src 'self' https://file." + boxDomain);
+          }
+        } catch (e) {}
+    # ── 网盘文件桥（request 阶段，官方《自动拦截文件选择器》专题）───────────
+    - id: lazycat-file-bridge
+      'on': request
+      auth_required: false
+      when:
+        - /__lazycat_file_bridge/*
+      do:
+        - src: |
+            const bridgePrefix = "/__lazycat_file_bridge";
+            const requestHost = String(ctx.request.host || "").split(":")[0].toLowerCase();
+            const firstDot = requestHost.indexOf(".");
+            const method = String(ctx.request.method || "").toUpperCase();
+            if (firstDot <= 0 || !requestHost.endsWith(".heiyu.space") ||
+                !["GET", "HEAD", "PUT"].includes(method)) {
+              ctx.response.send(["GET", "HEAD", "PUT"].includes(method) ? 400 : 405,
+                "Invalid LazyCat file bridge request");
+              return;
+            }
+            const boxDomain = requestHost.slice(firstDot + 1);
+            ctx.headers.del("Origin");
+            ctx.headers.del("Referer");
+            ctx.proxy.to("https://file." + boxDomain, {
+              path: "/files/home" + ctx.request.path.slice(bridgePrefix.length),
+              query: ctx.request.raw_query,
+              use_target_host: true,
+              timeout_ms: 120000,
+              on_fail: "error",
+            });
+    # ── 网盘文件选择器（browser 阶段，官方脚本）────────────────────────────
+    - id: open-save-chooser
+      'on': browser
+      auth_required: false
+      when:
+        - /*
+      do:
+        - src: >-
+            file:///lzcapp/pkg/content/lazycat-injects/lzc-file-chooser-inject.js
+          params:
+            diskRoot: /_lzc/files/home
+            fileBridgeRoot: /__lazycat_file_bridge
+            fallbackMime: application/octet-stream
+            locale: auto
+            hooks:
+              fileSystemAccess: true
+              fileInput: true
+              downloadAnchor: true
+
+services:
+  # ── PostgreSQL 18（上游 compose 同款；数据绑定路径与镜像 VOLUME 对齐）────
+  postgres:
+    image: registry.lazycat.cloud/wans/library/postgres:a697a4ecdca9e513
+    environment:
+      - POSTGRES_USER=pokemon
+      - POSTGRES_PASSWORD=pokecollector_lzc_db_2026
+      - POSTGRES_DB=pokemon_tcg
+      - TZ=Asia/Shanghai
+    binds:
+      - /lzcapp/var/pokecollector/postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -q -U pokemon -d pokemon_tcg || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 120s
+
+  # ── PokéCollector 后端（FastAPI + APScheduler，首启自动建库、建管理员）──
+  backend:
+    image: registry.lazycat.cloud/wans/git-romer/pokecollector-backend:a201c0e153d603b9
+    depends_on:
+      - postgres
+    environment:
+      - TZ=Asia/Shanghai
+      - DATABASE_URL=postgresql://pokemon:pokecollector_lzc_db_2026@postgres:5432/pokemon_tcg
+      # 首次启动自动创建管理员（商店审核账号，已在简介中公开）
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=PkLzc-6Ht9Vr2x
+      # 不在日志中打印初始化密码
+      - ADMIN_BOOTSTRAP_LOG=false
+      # 登录令牌签名密钥：每台微服每应用稳定（重启后旧会话仍有效）
+      - JWT_SECRET_KEY={{ stable_secret "pokecollector-jwt" }}
+      # 卡牌数据同步语言：英文 + 简体中文（卡名/资料含中文）
+      - TCGDEX_SYNC_LANGUAGES=en,zh-cn
+      # 可选 HTTP 代理（部署参数 http_proxy；留空则直连）。用于无法直连 TCGdex 的网络。
+      - HTTPS_PROXY={{ if (index .U "http_proxy") }}{{ index .U "http_proxy" }}{{ end }}
+      - HTTP_PROXY={{ if (index .U "http_proxy") }}{{ index .U "http_proxy" }}{{ end }}
+    # 打补丁：为 TCGdex 请求增加退避重试（LZC patch v1，文件在包内 content/patches/）。
+    # 本网络到 api.tcgdex.net 的连接会间歇性被重置；上游无重试会静默丢弃整语言数据。
+    setup_script: |
+      #!/bin/sh
+      if [ -f /lzcapp/pkg/content/patches/pokemon_api.py ]; then
+        cp -f /lzcapp/pkg/content/patches/pokemon_api.py /app/services/pokemon_api.py \
+          && rm -rf /app/services/__pycache__/pokemon_api.* 2>/dev/null
+        echo "lzc patch applied: pokemon_api.py"
+      fi
+    binds:
+      # 持久化按上游 compose 的粒度挂子目录（不要整挂 /app/data：
+      # 镜像自带 /app/data/pokedex.json，整挂会把该文件盖掉，导致卡牌
+      # 图鉴元数据全部 enrich 失败）。
+      - /lzcapp/var/pokecollector/backend-data/auth:/app/data/auth
+      - /lzcapp/var/pokecollector/backend-data/pokedex-images:/app/data/pokedex-images
+      - /lzcapp/var/pokecollector/backend-data/scan-uploads:/app/data/scan-uploads
+      - /lzcapp/var/pokecollector/backend-data/scan-traces:/app/data/scan-traces
+      - /lzcapp/var/pokecollector/backend-backups:/app/backups
+      - /lzcapp/var/pokecollector/backend-debug:/app/debug
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8000/api/auth/mode || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 600s
+
+  # ── PokéCollector 前端（nginx：SPA 静态资源 + /api 反向代理）────────────
+  frontend:
+    image: registry.lazycat.cloud/wans/git-romer/pokecollector-frontend:d18d0db8bf2618b9
+    depends_on:
+      - backend
+    environment:
+      - TZ=Asia/Shanghai
+      - PUBLIC_MODE=false
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s

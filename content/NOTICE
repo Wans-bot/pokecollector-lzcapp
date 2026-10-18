@@ -1,0 +1,25 @@
+PokéCollector（懒猫微服移植版）
+================================
+
+上游项目：https://github.com/Git-Romer/pokecollector
+锁定版本：v1.51.0（commit d18db13770cebf6cc800ea9563f37b9df533 的发布标签）
+上游许可：AGPL-3.0-only（见同目录 LICENSE）
+
+本包为上游官方镜像的部署打包，并对后端打一个最小补丁（见下文 content/patches/）：
+- 后端镜像 ghcr.io/git-romer/pokecollector-backend:1.51.0
+- 前端镜像 ghcr.io/git-romer/pokecollector-frontend:1.51.0
+- 数据库镜像 postgres:18-alpine
+
+本地内容：
+- content/LICENSE：上游许可原文。
+- content/patches/pokemon_api.py：对上游 backend/services/pokemon_api.py 的修改版
+  （AGPL-3.0 允许修改与再分发；修改点：为所有 TCGdex 请求增加退避重试并在
+  失败时输出日志，未改动其他逻辑；由 setup_script 在容器启动时覆盖安装）。
+  修改前的上游原文可从锁定版本的 GitHub 仓库获取。
+- content/lazycat-injects/pkc-autologin.js：本地编写的免密登录与默认中文注入。
+- content/lazycat-injects/lzc-file-chooser-inject.js：懒猫官方文件选择器脚本
+  （来源 https://developer.lazycat.cloud/lazycat-injects/lzc-file-chooser-inject.js，
+  仅按官方文档原样内置）。
+
+图标：取上游仓库 frontend/public/icon-512.png（512x512），转换为 8bit RGBA PNG
+（未改动设计），用于应用商店图标。
