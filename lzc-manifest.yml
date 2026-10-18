@@ -114,7 +114,6 @@ application:
               fileSystemAccess: true
               fileInput: true
               downloadAnchor: true
-
 services:
   # ── PostgreSQL 18（上游 compose 同款；数据绑定路径与镜像 VOLUME 对齐）────
   postgres:
@@ -132,10 +131,10 @@ services:
       timeout: 5s
       retries: 10
       start_period: 120s
-
   # ── PokéCollector 后端（FastAPI + APScheduler，首启自动建库、建管理员）──
   backend:
-    image: registry.lazycat.cloud/wans/git-romer/pokecollector-backend:a201c0e153d603b9
+    # upstream: ghcr.io/git-romer/pokecollector-backend:1.51.2
+    image: registry.lazycat.cloud/wans/git-romer/pokecollector-backend:ceb7741258235e22
     depends_on:
       - postgres
     environment:
@@ -178,7 +177,6 @@ services:
       timeout: 10s
       retries: 5
       start_period: 600s
-
   # ── PokéCollector 前端（nginx：SPA 静态资源 + /api 反向代理）────────────
   frontend:
     image: registry.lazycat.cloud/wans/git-romer/pokecollector-frontend:d18d0db8bf2618b9
