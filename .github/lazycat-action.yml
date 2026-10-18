@@ -35,5 +35,15 @@ stores:
     changelog_locales:
       - zh-CN
       - en-US
+    application:
+      language: zh
+      brief: "宝可梦卡牌收藏管理"
+      description: "自托管的宝可梦卡牌收藏管理器：记录持有卡牌与卡册、追踪价格与收藏进度，支持多用户与统计图表。"
+      keywords: "宝可梦, 卡牌, 收藏, 卡册, TCG"
+      support_pc: true
+      screenshot_pc_files:
+        - ".github/screenshots/pc-1.png"
+        - ".github/screenshots/pc-2.png"
+        - ".github/screenshots/pc-3.png"
   private:
     enabled: false
