@@ -133,8 +133,8 @@ services:
       start_period: 120s
   # ── PokéCollector 后端（FastAPI + APScheduler，首启自动建库、建管理员）──
   backend:
-    # upstream: ghcr.io/git-romer/pokecollector-backend:1.51.2
-    image: registry.lazycat.cloud/wans/git-romer/pokecollector-backend:ceb7741258235e22
+    # upstream: ghcr.io/git-romer/pokecollector-backend:1.55.1
+    image: registry.lazycat.cloud/wans/git-romer/pokecollector-backend:34d8e217580d875a
     depends_on:
       - postgres
     environment:
