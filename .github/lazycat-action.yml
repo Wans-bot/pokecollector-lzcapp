@@ -33,7 +33,8 @@ stores:
     skip_if_version_exists: true
     create_if_missing: true
     changelog_locales:
-      - zh-CN
+      - zh
+      - en
     application:
       language: zh
       brief: "宝可梦卡牌收藏管理"
