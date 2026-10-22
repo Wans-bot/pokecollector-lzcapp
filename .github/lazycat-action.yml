@@ -34,7 +34,6 @@ stores:
     create_if_missing: true
     changelog_locales:
       - zh-CN
-      - en-US
     application:
       language: zh
       brief: "宝可梦卡牌收藏管理"
