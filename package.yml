@@ -1,5 +1,5 @@
 package: cloud.lazycat.app.pokecollector
-version: 1.55.1-2
+version: 1.55.1
 name: PokéCollector 宝可梦卡牌收藏
 description: 自托管的宝可梦卡牌收藏管理器：记录持有卡牌与卡册、追踪价格与收藏进度，支持多用户与统计图表。
 author: Gilles Romer (Git-Romer)
